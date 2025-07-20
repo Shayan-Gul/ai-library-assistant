@@ -11,7 +11,7 @@ This project is a sophisticated, command-line interface (CLI) for managing a lib
 -   **Secure Operations**: Potentially destructive raw SQL queries are fire-walled behind a password prompt, preventing accidental changes.
 -   **Persistent Logging**: All function calls triggered by the AI are logged to `executed_commands.log` for easy review and debugging.
 
-## Technology Stack
+## Tech Stack
 
 -   **Python 3**
 -   **AI Model**: Mistral (`mistral-large-latest`)
