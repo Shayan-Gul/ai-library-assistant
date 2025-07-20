@@ -36,10 +36,12 @@ class Mistral_Ai:
         self.tools: dict[str, partial] = tools
 
     def __enter__(self) -> Self:
+        logging.debug("Initilising Ai client")
         self._initilise_clients()
         return self
     
     def __exit__(self, exc_type, exc_value, traceback):
+        logging.debug("Deinitilising Ai client")
         self._client = None
         return None
 
@@ -50,9 +52,12 @@ class Mistral_Ai:
 
     def text_gen(self, user_prompt: str) -> str | None:
  
+        logging.debug(f"Recieved: {user_prompt} | Validating")
         if user_prompt: self._messages_sent.append(UserMessage(content=user_prompt))
-        else: print("Invalid Prompt"); return None
+        else: logging.warning("Prompt Invalid");return None
         
+        logging.debug("User prompt is valid. Sending to Ai")
+
         while True:
             response = self._client.chat.complete(
                 model = self.model,
@@ -62,22 +67,24 @@ class Mistral_Ai:
                 parallel_tool_calls = True
             )
             
-            if not response: return None
+            if not response: logging.error("Ai failed to return a response");return None
 
             response = response.choices[0].message
             tool_calls = response.tool_calls
             if tool_calls:
                 for tool_call in response.tool_calls:
-                    logging.warning(f"Recieved a function call!")
+                    logging.debug(f"Recieved a function call!")
                     self._messages_sent.append(AssistantMessage(tool_calls=[tool_call]))
                     func_name = tool_call.function.name
                     func_params = json.loads(tool_call.function.arguments)
+                    logging.debug(f"Recieved {func_name}({func_params})")
                     callable_func = getattr(Librarian, func_name)
                     func_results = callable_func(self._librarian_ins, **func_params)
-                    logging.warning(f"Executed: {func_name}({func_results})\n\nReturned:{func_results}\n-----------------------------")
+                    logging.debug(f"Executed: {func_name}({func_results}) Returned:{func_results}\n-----------------------------")
                     self._messages_sent.append(ToolMessage(name=func_name, content=str(func_results), tool_call_id=tool_call.id))
                 continue
 
+            logging.debug("Recieved text response. Sneding to user")
             text_response = response.content
             self._messages_sent.append(AssistantMessage(content=text_response))
             return text_response
@@ -91,7 +98,7 @@ class Librarian:
         self.conn = conn
         self.cur = self.conn.cursor()
         self._create_tables()
-        logging.warning("INITILISED LIBRARIAN")
+        logging.debug("Initilised Librarian")
 
     @staticmethod
     def _generate_unique_id(prefix: str = "book") -> str:
